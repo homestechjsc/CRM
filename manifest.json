@@ -1,0 +1,21 @@
+{
+  "name": "Homestech CRM",
+  "short_name": "HT CRM",
+  "description": "Hệ thống quản lý khách hàng và báo giá Homestech",
+  "start_url": "/admin.html",
+  "display": "standalone",
+  "background_color": "#1d4ed8",
+  "theme_color": "#1d4ed8",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/5602/5602334.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/5602/5602334.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
