@@ -1,8 +1,7 @@
 {
   "name": "Homestech CRM",
   "short_name": "HT CRM",
-  "description": "Hệ thống quản lý khách hàng và báo giá Homestech",
-  "start_url": "/admin.html",
+  "start_url": "admin.html", 
   "display": "standalone",
   "background_color": "#1d4ed8",
   "theme_color": "#1d4ed8",
