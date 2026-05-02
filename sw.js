@@ -1,10 +1,21 @@
-<script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            // Đăng ký file sw.js để kích hoạt tính năng Offline và PWA
-            navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('✅ HT CRM PWA: Sẵn sàng!'))
-                .catch(err => console.error('❌ Lỗi đăng ký SW:', err));
-        });
-    }
-    </script>
+const CACHE_NAME = 'ht-crm-v2'; // Đổi tên để xóa cache cũ
+const ASSETS = [
+  'admin.html',
+  'admin-logic.js',
+  'firebase-config.js',
+  'manifest.json',
+  'https://cdn.tailwindcss.com',
+  'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
+];
+
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+  );
+});
+
+self.addEventListener('fetch', (e) => {
+  e.respondWith(
+    caches.match(e.request).then((res) => res || fetch(e.request))
+  );
+});
