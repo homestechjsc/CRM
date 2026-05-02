@@ -378,14 +378,19 @@ window.selectCustomer = async (id) => {
     document.getElementById('det-info').innerText = `${data.phone || ''} - ${data.address || ''}`;
 
     // Tạo mã QR cho khách hàng[cite: 1]
-    const qrContainer = document.getElementById('qrcode');
-    qrContainer.innerHTML = "";
-    if (window.QRCode) {
-        new QRCode(qrContainer, {
-            text: `${window.location.origin}/client-view.html?id=${id}`,
-            width: 120, height: 120
-        });
-    }
+    // Tìm đến phần tạo mã QR trong hàm window.selectCustomer
+const qrContainer = document.getElementById('qrcode');
+qrContainer.innerHTML = "";
+if (window.QRCode) {
+    // Thay đổi đường dẫn này thành địa chỉ GitHub Pages thật của bạn[cite: 1, 6]
+    const clientUrl = `https://homestechjsc.github.io/crmhomestech/client-view.html?id=${id}`;
+    
+    new QRCode(qrContainer, {
+        text: clientUrl,
+        width: 120, 
+        height: 120
+    });
+}
 
     // Tải danh sách Thiết bị lắp đặt[cite: 1]
     loadSubData('devices', 'list-devices', (item, key) => `
