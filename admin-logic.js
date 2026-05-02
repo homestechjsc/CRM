@@ -73,19 +73,43 @@ window.stopScanner = () => {
     }
 };
 
-// --- 3. QUẢN LÝ KHÁCH HÀNG & THIẾT BỊ ---
+// --- 3. QUẢN LÝ KHÁCH HÀNG & THIẾT BỊ (Đã sửa để dùng Mã KH) ---
 window.saveCustomer = async () => {
+    // Lấy giá trị Mã KH từ ô nhập liệu mới
+    const customId = document.getElementById('in-cust-id').value.trim().toUpperCase(); 
     const name = document.getElementById('in-cust-name').value;
     const phone = document.getElementById('in-cust-phone').value;
     const addr = document.getElementById('in-cust-addr').value;
+
+    if (!customId) return alert("Vui lòng nhập Mã khách hàng (Ví dụ: KH001)");
     if (!name) return alert("Vui lòng nhập tên khách hàng");
 
-    const data = { name, phone, address: addr, updatedAt: Date.now() };
+    const data = { 
+        customId, // Lưu lại Mã KH vào trong object dữ liệu
+        name, 
+        phone, 
+        address: addr, 
+        updatedAt: Date.now() 
+    };
+
     try {
-        if (editingCustomerId) await set(ref(db, `customers/${editingCustomerId}`), data);
-        else await set(push(ref(db, 'customers')), { ...data, createdAt: Date.now() });
+        if (editingCustomerId) {
+            // Nếu đang sửa khách hàng cũ
+            await set(ref(db, `customers/${editingCustomerId}`), data);
+        } else {
+            // Tạo mới: Dùng customId làm key thay vì dùng push() tự động
+            await set(ref(db, `customers/${customId}`), { 
+                ...data, 
+                createdAt: Date.now() 
+            });
+        }
         window.closeModal('modal-add-customer');
-    } catch (e) { console.error(e); }
+        // Reset form và ID đang sửa
+        editingCustomerId = null; 
+    } catch (e) { 
+        console.error("Lỗi lưu khách hàng:", e); 
+        alert("Không thể lưu dữ liệu, vui lòng kiểm tra lại!");
+    }
 };
 
 
@@ -342,18 +366,47 @@ window.saveQuoteItem = async () => {
     }
 };
 
+window.deleteQuote = async (id) => {
+    if (!id || !confirm("Xóa TOÀN BỘ bản báo giá này?")) return;
+    try {
+        await remove(ref(db, `quotes/${id}`));
+        if (currentSelectedQuoteId === id) {
+            document.getElementById('quote-detail-area')?.classList.add('hidden');
+            currentSelectedQuoteId = null;
+        }
+        alert("Đã xóa xong!");
+    } catch (e) {
+        alert("Lỗi: " + e.message);
+    }
+};
+
 // --- 6. KHỞI CHẠY & WATCHERS ---
 export function watchQuotes() {
     onValue(ref(db, 'quotes'), (snapshot) => {
         const list = document.getElementById('list-quotes');
         if (!list) return;
         list.innerHTML = "";
+        
         snapshot.forEach(childSnap => {
             const quote = childSnap.val();
             const id = childSnap.key;
             const li = document.createElement('li');
-            li.className = `p-4 cursor-pointer border-b hover:bg-gray-50 transition-all ${currentSelectedQuoteId === id ? 'bg-green-50 border-l-4 border-green-500' : ''}`;
-            li.innerHTML = `<div onclick="window.selectQuote('${id}')"><p class="font-bold text-sm">${quote.title}</p><p class="text-[10px] text-gray-400 italic">${new Date(quote.createdAt).toLocaleDateString()}</p></div>`;
+            
+            // Thêm class 'group' và 'relative' để định vị nút xóa
+            li.className = `p-4 cursor-pointer border-b hover:bg-gray-50 transition-all group relative ${currentSelectedQuoteId === id ? 'bg-green-50 border-l-4 border-green-500' : ''}`;
+            
+            li.innerHTML = `
+                <div onclick="window.selectQuote('${id}')" class="flex-1">
+                    <p class="font-bold text-sm text-gray-800">${quote.title}</p>
+                    <p class="text-[10px] text-gray-400 italic">${new Date(quote.createdAt).toLocaleDateString()}</p>
+                </div>
+                <!-- NÚT XÓA TOÀN BỘ BÁO GIÁ: Chỉ hiện khi di chuột vào dòng -->
+                <button onclick="event.stopPropagation(); window.deleteQuote('${id}')" 
+                        class="absolute right-4 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all p-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                </button>`;
             list.appendChild(li);
         });
     });
@@ -377,22 +430,25 @@ window.selectCustomer = async (id) => {
     document.getElementById('det-name').innerText = data.name;
     document.getElementById('det-info').innerText = `${data.phone || ''} - ${data.address || ''}`;
 
-    // Tìm hàm tạo QR cho khách (thường nằm trong selectCustomer)
+    // Tạo mã QR cho khách hàng (Đã sửa theo Mã KH và GitHub Pages)[cite: 1, 5]
 const qrContainer = document.getElementById('qrcode');
 qrContainer.innerHTML = "";
-
 if (window.QRCode) {
-    // THAY ĐỔI: Sử dụng đường dẫn đầy đủ trên GitHub của bạn
-    // Ví dụ: https://homestechjsc.github.io/crmhomestech/client-view.html
-    const clientUrl = `https://homestechjsc.github.io/crmhomestech/client-view.html?id=${id}`;
-    
+    // 1. Dùng đường dẫn cố định của dự án trên GitHub để tránh lỗi localhost
+    // 2. Thay đổi tham số 'id' thành 'makh' để khớp với yêu cầu mới[cite: 1]
+    const repoPath = "https://homestechjsc.github.io/crmhomestech";
+    const clientUrl = `${repoPath}/client-view.html?makh=${id}`;
+
     new QRCode(qrContainer, {
         text: clientUrl,
-        width: 128,
-        height: 128,
-        colorDark: "#1e40af", // Màu xanh chuyên nghiệp
-        colorLight: "#ffffff"
+        width: 120, 
+        height: 120,
+        colorDark: "#1d4ed8", // Màu xanh cùng tone với hệ thống
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H // Tăng khả năng quét khi in ấn
     });
+    
+    console.log("QR Code trỏ tới:", clientUrl); // Để bạn kiểm tra trong Console
 }
     // Tải danh sách Thiết bị lắp đặt[cite: 1]
     loadSubData('devices', 'list-devices', (item, key) => `
@@ -587,6 +643,8 @@ window.printQuote = () => {
     // Lưu ý: Thư viện sẽ tự động ẩn các nút bấm nếu bạn thêm class 'no-print' cho chúng
     html2pdf().set(opt).from(element).save();
 };
+
+
 // Khởi chạy đồng thời cả hai bộ theo dõi[cite: 1]
 watchCustomers();
 watchQuotes();
