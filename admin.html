@@ -50,6 +50,7 @@
             border-radius: 20px; transition: all 0.2s;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
         }
+        
         .action-btn:active { transform: scale(0.96); background: #f1f5f9; }
 
         .nav-active { color: #059669; }
@@ -57,6 +58,22 @@
 
         /* Tối ưu Input cho Mobile */
         input, select { font-size: 16px !important; } /* Ngừa iPhone tự động zoom khi focus */
+        @keyframes scan-line-anim {
+        0% { top: 0%; opacity: 0; }
+        10% { opacity: 1; }
+        90% { opacity: 1; }
+        100% { top: 100%; opacity: 0; }
+    }
+
+    .animate-scan-line {
+        animation: scan-line-anim 2.5s linear infinite;
+    }
+
+    /* Đảm bảo video camera bao phủ hết khung */
+    #reader video {
+        object-fit: cover !important;
+    }
+        
     </style>
 </head>
 <body class="pb-28">
@@ -279,37 +296,51 @@
         <h3 id="modal-device-title" class="text-2xl font-black text-slate-900 mb-6">Thêm thiết bị mới</h3>
         
         <div class="space-y-4">
-            <div id="reader-container" class="hidden mb-4 rounded-xl overflow-hidden shadow-inner border-2 border-emerald-500">
-                <div id="reader"></div>
-                <button type="button" onclick="window.stopScanner()" class="w-full bg-red-500 text-white py-3 text-xs font-bold uppercase">Dừng quét</button>
-            </div>
-
-            <div class="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
-                <input id="in-dev-name" type="text" placeholder="Tên thiết bị (VD: Cam sân vườn)" class="w-full bg-white p-4 rounded-xl border border-emerald-100 outline-none mb-3">
+    <div id="reader-container" class="hidden mb-4 rounded-3xl overflow-hidden shadow-2xl border-4 border-emerald-500 relative bg-black">
+        <div id="reader" class="w-full"></div>
+        
+        <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <div class="w-64 h-40 border-2 border-emerald-400/30 rounded-2xl relative shadow-[0_0_0_1000px_rgba(0,0,0,0.5)]">
                 
-                <div class="relative">
-                    <input id="in-dev-model" type="text" placeholder="Số S/N hoặc Model" class="w-full bg-white p-4 pr-14 rounded-xl border border-emerald-100 outline-none">
-                    
-                    <button type="button" onclick="window.startScanner()" class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center z-20 active:bg-emerald-200">
-                        <i class="fa-solid fa-qrcode text-xl"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
-                <input id="in-dev-ip" type="text" placeholder="Địa chỉ IP truy cập" class="w-full bg-white p-4 rounded-xl border border-slate-100 outline-none">
+                <div class="absolute inset-x-0 top-0 h-1 bg-emerald-400 shadow-[0_0_15px_#34d399] animate-scan-line"></div>
                 
-                <div class="relative">
-                    <input id="in-dev-pass" type="text" placeholder="Mật khẩu thiết bị" class="w-full bg-white p-4 rounded-xl border border-slate-100 outline-none">
-                    <i class="fa-solid fa-lock absolute right-4 top-1/2 -translate-y-1/2 text-slate-300"></i>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-3 pt-4">
-                <button type="button" onclick="window.closeModal('modal-add-device')" class="p-5 bg-slate-100 rounded-2xl font-bold text-slate-500">Đóng</button>
-                <button type="button" onclick="window.saveDevice()" class="p-5 bg-emerald-600 text-white rounded-2xl font-black shadow-lg">XÁC NHẬN</button>
+                <div class="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-emerald-500 rounded-tl-lg"></div>
+                <div class="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-emerald-500 rounded-tr-lg"></div>
+                <div class="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-emerald-500 rounded-bl-lg"></div>
+                <div class="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-emerald-500 rounded-br-lg"></div>
             </div>
         </div>
+
+        <button type="button" onclick="window.stopScanner()" class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-red-500/90 backdrop-blur-md text-white px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest z-50 shadow-lg">
+            Dừng quét
+        </button>
+    </div>
+
+    <div class="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
+        <input id="in-dev-name" type="text" placeholder="Tên thiết bị (VD: Cam sân vườn)" class="w-full bg-white p-4 rounded-xl border border-emerald-100 outline-none mb-3">
+        
+        <div class="relative">
+            <input id="in-dev-model" type="text" placeholder="Số S/N hoặc Model" class="w-full bg-white p-4 pr-14 rounded-xl border border-emerald-100 outline-none">
+            <button type="button" onclick="window.startScanner()" class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center z-20 active:bg-emerald-200">
+                <i class="fa-solid fa-qrcode text-xl"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 space-y-3">
+        <input id="in-dev-ip" type="text" placeholder="Địa chỉ IP truy cập" class="w-full bg-white p-4 rounded-xl border border-slate-100 outline-none">
+        
+        <div class="relative">
+            <input id="in-dev-pass" type="text" placeholder="Mật khẩu thiết bị" class="w-full bg-white p-4 rounded-xl border border-slate-100 outline-none">
+            <i class="fa-solid fa-lock absolute right-4 top-1/2 -translate-y-1/2 text-slate-300"></i>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3 pt-4">
+        <button type="button" onclick="window.closeModal('modal-add-device')" class="p-5 bg-slate-100 rounded-2xl font-bold text-slate-500">Đóng</button>
+        <button type="button" onclick="window.saveDevice()" class="p-5 bg-emerald-600 text-white rounded-2xl font-black shadow-lg">XÁC NHẬN</button>
+    </div>
+</div>
     </div>
 </div>
 
