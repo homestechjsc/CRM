@@ -462,7 +462,6 @@ new QRCode(qrBox, {
     text: clientUrl, 
     width: 120, 
     height: 120,
-    colorDark: "#059669", // Màu xanh lục đồng bộ
     correctLevel: QRCode.CorrectLevel.H 
 });
 
@@ -641,7 +640,28 @@ window.editDiagram = async (id) => {
         }
     } catch (e) { alert("Lỗi tải dữ liệu!"); }
 };
+window.downloadQRCode = () => {
+    const qrContainer = document.getElementById('qrcode');
+    const canvas = qrContainer.querySelector('canvas');
+    const img = qrContainer.querySelector('img');
 
+    let imagePath = "";
+    if (canvas) {
+        imagePath = canvas.toDataURL("image/png");
+    } else if (img) {
+        imagePath = img.src;
+    }
+
+    if (!imagePath) return;
+
+    const clientName = document.getElementById('det-name').innerText || "Khach_Hang";
+    const link = document.createElement("a");
+    link.href = imagePath;
+    link.download = `QR_Homestech_${clientName.replace(/\s+/g, '_')}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
 // --- 9. XUẤT BÁO GIÁ SANG FILE PDF ---
 window.printQuote = () => {
     // Chọn vùng cần in (Vùng chứa toàn bộ bảng tính và tổng cộng)
