@@ -60,25 +60,43 @@ window.closeModal = (id) => {
 };
 
 // --- 2. QUẢN LÝ QUÉT MÃ S/N ---
+// Thêm/Cập nhật đoạn này vào file admin-logic.js
 window.startScanner = () => {
     const readerElem = document.getElementById('reader');
-    if (readerElem) {
-        readerElem.classList.remove('hidden');
-        html5QrCode = new Html5Qrcode("reader");
-        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
-        html5QrCode.start({ facingMode: "environment" }, config, (decodedText) => {
-            document.getElementById('in-dev-serial').value = decodedText;
-            window.stopScanner(); 
-        }).catch(err => alert("Lỗi camera: " + err));
+    const container = document.getElementById('reader-container');
+    
+    if (readerElem && container) {
+        container.classList.remove('hidden'); // Hiện vùng camera
+        html5QrCode = new Html5Qrcode("reader"); // Khởi tạo scanner
+        
+        const config = { 
+            fps: 10, 
+            qrbox: { width: 250, height: 150 }, // Tối ưu cho mã vạch dài
+            aspectRatio: 1.0
+        };
+
+        html5QrCode.start(
+            { facingMode: "environment" }, // Ưu tiên camera sau
+            config, 
+            (decodedText) => {
+                // Khi quét thành công
+                document.getElementById('in-dev-model').value = decodedText;
+                window.stopScanner(); 
+                if (navigator.vibrate) navigator.vibrate(100); // Rung nhẹ báo hiệu thành công
+            }
+        ).catch(err => {
+            console.error("Lỗi camera: ", err);
+            alert("Vui lòng cấp quyền truy cập camera!");
+        });
     }
 };
 
 window.stopScanner = () => {
     if (html5QrCode) {
         html5QrCode.stop().then(() => {
-            document.getElementById('reader').classList.add('hidden');
+            document.getElementById('reader-container').classList.add('hidden');
             html5QrCode = null;
-        }).catch(err => console.error(err));
+        }).catch(err => console.error("Lỗi khi dừng camera:", err));
     }
 };
 
