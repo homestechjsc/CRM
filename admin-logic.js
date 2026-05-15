@@ -451,9 +451,20 @@ window.selectCustomer = async (id) => {
         </div>`;
     
     // Khởi tạo mã QR
-    const qrBox = document.getElementById('qrcode');
-    qrBox.innerHTML = "";
-    new QRCode(qrBox, { text: `${window.location.origin}/client-view.html?id=${id}`, width: 100, height: 100 });
+    // Khởi tạo mã QR - Sử dụng đường dẫn tuyệt đối đến GitHub Pages của bạn
+const qrBox = document.getElementById('qrcode');
+qrBox.innerHTML = "";
+
+// Đảm bảo đường dẫn này khớp chính xác với URL dự án của bạn
+const clientUrl = `https://homestechjsc.github.io/CRM/client-view.html?id=${id}`;
+
+new QRCode(qrBox, { 
+    text: clientUrl, 
+    width: 120, 
+    height: 120,
+    colorDark: "#059669", // Màu xanh lục đồng bộ
+    correctLevel: QRCode.CorrectLevel.H 
+});
 
     // --- RENDER THIẾT BỊ (Có nút Sửa/Xóa) ---
 loadSubData('devices', 'list-devices', (item, key) => `
