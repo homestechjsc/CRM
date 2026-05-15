@@ -276,13 +276,21 @@
     <div id="modal-add-device" class="modal-overlay hidden">
     <div class="modal-content">
         <div class="w-16 h-1.5 bg-slate-200 rounded-full mx-auto mb-8"></div>
-        <h3 class="text-2xl font-black text-slate-900 mb-6">Thêm thiết bị mới</h3>
+        <h3 id="modal-device-title" class="text-2xl font-black text-slate-900 mb-6">Thêm thiết bị mới</h3>
+        
         <div class="space-y-4">
+            <div id="reader-container" class="hidden mb-4 rounded-xl overflow-hidden shadow-inner border-2 border-emerald-500">
+                <div id="reader"></div>
+                <button type="button" onclick="window.stopScanner()" class="w-full bg-red-500 text-white py-3 text-xs font-bold uppercase">Dừng quét</button>
+            </div>
+
             <div class="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
                 <input id="in-dev-name" type="text" placeholder="Tên thiết bị (VD: Cam sân vườn)" class="w-full bg-white p-4 rounded-xl border border-emerald-100 outline-none mb-3">
+                
                 <div class="relative">
                     <input id="in-dev-model" type="text" placeholder="Số S/N hoặc Model" class="w-full bg-white p-4 pr-14 rounded-xl border border-emerald-100 outline-none">
-                    <button onclick="window.startScanner()" class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center">
+                    
+                    <button type="button" onclick="window.startScanner()" class="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center z-20 active:bg-emerald-200">
                         <i class="fa-solid fa-qrcode text-xl"></i>
                     </button>
                 </div>
@@ -298,8 +306,8 @@
             </div>
 
             <div class="grid grid-cols-2 gap-3 pt-4">
-                <button onclick="window.closeModal('modal-add-device')" class="p-5 bg-slate-100 rounded-2xl font-bold text-slate-500">Đóng</button>
-                <button onclick="window.saveDevice()" class="p-5 bg-emerald-600 text-white rounded-2xl font-black shadow-lg">XÁC NHẬN</button>
+                <button type="button" onclick="window.closeModal('modal-add-device')" class="p-5 bg-slate-100 rounded-2xl font-bold text-slate-500">Đóng</button>
+                <button type="button" onclick="window.saveDevice()" class="p-5 bg-emerald-600 text-white rounded-2xl font-black shadow-lg">XÁC NHẬN</button>
             </div>
         </div>
     </div>
