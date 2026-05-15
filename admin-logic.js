@@ -8,7 +8,14 @@ let quoteData = null;
 let editingDeviceId = null; 
 let editingCustomerId = null;
 let html5QrCode = null; 
+let editingAccountId = null;
+let editingDiagramId = null;
 
+const getCurrentTechName = () => {
+    // Sau này khi bạn làm trang login, bạn sẽ lưu tên kỹ thuật vào localStorage khi đăng nhập thành công
+    // Ví dụ: localStorage.setItem('techName', 'Nguyễn Văn A');
+    return localStorage.getItem('techName') || "Kỹ thuật Homestech";
+};
 // Hàm định dạng tiền tệ Việt Nam
 const formatVND = (num) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
 
@@ -31,9 +38,11 @@ window.openModal = (id) => {
     const modal = document.getElementById(id);
     if (modal) {
         modal.classList.remove('hidden');
-        // Tự động điền ngày hiện tại nếu là modal thêm thiết bị
-        if (id === 'modal-add-device' && !editingDeviceId) {
-            document.getElementById('in-dev-install-date').value = new Date().toISOString().split('T')[0];
+        
+        // Sửa lỗi dòng 41: Kiểm tra nếu có ô input ngày mới điền
+        const dateInput = document.getElementById('in-dev-install-date');
+        if (id === 'modal-add-device' && !editingDeviceId && dateInput) {
+            dateInput.value = new Date().toISOString().split('T')[0];
         }
     }
 };
@@ -73,71 +82,85 @@ window.stopScanner = () => {
     }
 };
 
-// --- 3. QUẢN LÝ KHÁCH HÀNG & THIẾT BỊ (Đã sửa để dùng Mã KH) ---
+// --- 3. QUẢN LÝ KHÁCH HÀNG & THIẾT BỊ ---
 window.saveCustomer = async () => {
-    // Lấy giá trị Mã KH từ ô nhập liệu mới
-    const customId = document.getElementById('in-cust-id').value.trim().toUpperCase(); 
     const name = document.getElementById('in-cust-name').value;
     const phone = document.getElementById('in-cust-phone').value;
+    const contact = document.getElementById('in-cust-contact').value;
+    const contactPhone = document.getElementById('in-cust-contact-phone').value;
     const addr = document.getElementById('in-cust-addr').value;
+    
+    // Tự động lấy tên kỹ thuật đang đăng nhập
+    const technicalStaff = getCurrentTechName();
 
-    if (!customId) return alert("Vui lòng nhập Mã khách hàng (Ví dụ: KH001)");
-    if (!name) return alert("Vui lòng nhập tên khách hàng");
+    if (!name || !phone) return alert("Vui lòng nhập tên và SĐT khách hàng");
 
-    const data = { 
-        customId, // Lưu lại Mã KH vào trong object dữ liệu
-        name, 
-        phone, 
-        address: addr, 
-        updatedAt: Date.now() 
+    const data = {
+        name,
+        phone,
+        contact,
+        contactPhone,
+        address: addr,
+        createdByTech: technicalStaff, // Lưu tên kỹ thuật thực hiện vào DB
+        updatedAt: Date.now()
     };
 
     try {
         if (editingCustomerId) {
-            // Nếu đang sửa khách hàng cũ
             await set(ref(db, `customers/${editingCustomerId}`), data);
         } else {
-            // Tạo mới: Dùng customId làm key thay vì dùng push() tự động
-            await set(ref(db, `customers/${customId}`), { 
+            await set(push(ref(db, 'customers')), { 
                 ...data, 
                 createdAt: Date.now() 
             });
         }
+        alert("Đã lưu hồ sơ thành công!");
         window.closeModal('modal-add-customer');
-        // Reset form và ID đang sửa
-        editingCustomerId = null; 
-    } catch (e) { 
-        console.error("Lỗi lưu khách hàng:", e); 
-        alert("Không thể lưu dữ liệu, vui lòng kiểm tra lại!");
+        // Reset form
+        editingCustomerId = null;
+    } catch (e) {
+        alert("Lỗi: " + e.message);
     }
 };
 
+window.saveDevice = async () => {
+    const name = document.getElementById('in-dev-name').value;
+    const model = document.getElementById('in-dev-model').value;
+    const ip = document.getElementById('in-dev-ip').value;
+    const password = document.getElementById('in-dev-pass').value; // Lấy mật khẩu
 
-window.saveDevice = async (shouldClose = true) => {
-    const data = {
+    if (!currentSelectedCustId) return alert("Vui lòng chọn khách hàng trước");
+    if (!name) return alert("Vui lòng nhập tên thiết bị");
+
+    const deviceData = {
         customerId: currentSelectedCustId,
-        name: document.getElementById('in-dev-name').value,
-        serial: document.getElementById('in-dev-serial').value,
-        brand: document.getElementById('in-dev-brand').value,
-        installDate: document.getElementById('in-dev-install-date').value,
-        warranty: document.getElementById('in-dev-warranty').value,
-        ip: document.getElementById('in-dev-ip').value,
-        user: document.getElementById('in-dev-user').value,
-        pass: document.getElementById('in-dev-pass').value,
-        imgUrl: document.getElementById('in-dev-img-url').value,
+        name,
+        model,
+        ip,
+        password, // Lưu vào object
         updatedAt: Date.now()
     };
-    if (!data.name || !currentSelectedCustId) return alert("Thiếu thông tin thiết bị");
-    try {
-        if (editingDeviceId) await set(ref(db, `devices/${editingDeviceId}`), data);
-        else await set(push(ref(db, 'devices')), { ...data, createdAt: Date.now() });
 
-        if (shouldClose) window.closeModal('modal-add-device');
-        else {
-            document.getElementById('in-dev-serial').value = "";
-            document.getElementById('in-dev-serial').focus();
+    try {
+        if (editingDeviceId) {
+            await set(ref(db, `devices/${editingDeviceId}`), deviceData);
+            editingDeviceId = null;
+        } else {
+            await push(ref(db, 'devices'), { ...deviceData, createdAt: Date.now() });
         }
-    } catch (e) { console.error(e); }
+        
+        // Reset form
+        document.getElementById('in-dev-name').value = "";
+        document.getElementById('in-dev-model').value = "";
+        document.getElementById('in-dev-ip').value = "";
+        document.getElementById('in-dev-pass').value = "";
+        
+        window.closeModal('modal-add-device');
+        alert("Đã lưu thiết bị!");
+    } catch (e) {
+        console.error(e);
+        alert("Lỗi khi lưu thiết bị");
+    }
 };
 
 window.saveDeviceContinuous = async () => { await window.saveDevice(false); };
@@ -176,7 +199,7 @@ window.saveDiagram = async () => {
     const url = document.getElementById('in-diag-url').value;
 
     if (!name || !url || !currentSelectedCustId) {
-        return alert("Vui lòng nhập đủ tên sơ đồ, link ảnh và chọn khách hàng!");
+        return alert("Vui lòng nhập đủ thông tin sơ đồ!");
     }
 
     try {
@@ -187,6 +210,7 @@ window.saveDiagram = async () => {
             createdAt: Date.now() 
         });
         window.closeModal('modal-add-diagram');
+        alert("Đã thêm sơ đồ thành công!");
     } catch (e) { 
         console.error("Lỗi lưu sơ đồ:", e); 
     }
@@ -366,47 +390,18 @@ window.saveQuoteItem = async () => {
     }
 };
 
-window.deleteQuote = async (id) => {
-    if (!id || !confirm("Xóa TOÀN BỘ bản báo giá này?")) return;
-    try {
-        await remove(ref(db, `quotes/${id}`));
-        if (currentSelectedQuoteId === id) {
-            document.getElementById('quote-detail-area')?.classList.add('hidden');
-            currentSelectedQuoteId = null;
-        }
-        alert("Đã xóa xong!");
-    } catch (e) {
-        alert("Lỗi: " + e.message);
-    }
-};
-
 // --- 6. KHỞI CHẠY & WATCHERS ---
 export function watchQuotes() {
     onValue(ref(db, 'quotes'), (snapshot) => {
         const list = document.getElementById('list-quotes');
         if (!list) return;
         list.innerHTML = "";
-        
         snapshot.forEach(childSnap => {
             const quote = childSnap.val();
             const id = childSnap.key;
             const li = document.createElement('li');
-            
-            // Thêm class 'group' và 'relative' để định vị nút xóa
-            li.className = `p-4 cursor-pointer border-b hover:bg-gray-50 transition-all group relative ${currentSelectedQuoteId === id ? 'bg-green-50 border-l-4 border-green-500' : ''}`;
-            
-            li.innerHTML = `
-                <div onclick="window.selectQuote('${id}')" class="flex-1">
-                    <p class="font-bold text-sm text-gray-800">${quote.title}</p>
-                    <p class="text-[10px] text-gray-400 italic">${new Date(quote.createdAt).toLocaleDateString()}</p>
-                </div>
-                <!-- NÚT XÓA TOÀN BỘ BÁO GIÁ: Chỉ hiện khi di chuột vào dòng -->
-                <button onclick="event.stopPropagation(); window.deleteQuote('${id}')" 
-                        class="absolute right-4 top-1/2 -translate-y-1/2 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-all p-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                </button>`;
+            li.className = `p-4 cursor-pointer border-b hover:bg-gray-50 transition-all ${currentSelectedQuoteId === id ? 'bg-green-50 border-l-4 border-green-500' : ''}`;
+            li.innerHTML = `<div onclick="window.selectQuote('${id}')"><p class="font-bold text-sm">${quote.title}</p><p class="text-[10px] text-gray-400 italic">${new Date(quote.createdAt).toLocaleDateString()}</p></div>`;
             list.appendChild(li);
         });
     });
@@ -416,81 +411,69 @@ export function watchQuotes() {
 window.addQuoteItemPrompt = () => window.openModal('modal-add-quote-item');
 window.deleteQuoteItem = async (qId, iKey) => { if (confirm("Xóa?")) await remove(ref(db, `quotes/${qId}/items/${iKey}`)); };
 window.selectCustomer = async (id) => {
-    currentSelectedCustId = id; // Lưu ID khách hàng đang chọn
-    
+    currentSelectedCustId = id;
     const snapshot = await get(child(ref(db), `customers/${id}`));
     if (!snapshot.exists()) return;
     const data = snapshot.val();
 
-    // Hiển thị vùng chi tiết và ẩn trạng thái trống
     document.getElementById('empty-state').classList.add('hidden');
     document.getElementById('customer-detail-area').classList.remove('hidden');
     
-    // Đổ thông tin cơ bản[cite: 1]
+    // Hiển thị thông tin khách hàng
     document.getElementById('det-name').innerText = data.name;
-    document.getElementById('det-info').innerText = `${data.phone || ''} - ${data.address || ''}`;
-
-    // Tạo mã QR cho khách hàng (Đã sửa theo Mã KH và GitHub Pages)[cite: 1, 5]
-const qrContainer = document.getElementById('qrcode');
-qrContainer.innerHTML = "";
-if (window.QRCode) {
-    // 1. Dùng đường dẫn cố định của dự án trên GitHub để tránh lỗi localhost
-    // 2. Thay đổi tham số 'id' thành 'makh' để khớp với yêu cầu mới[cite: 1]
-    const repoPath = "https://homestechjsc.github.io/crmhomestech";
-    const clientUrl = `${repoPath}/client-view.html?makh=${id}`;
-
-    new QRCode(qrContainer, {
-        text: clientUrl,
-        width: 120, 
-        height: 120,
-        colorDark: "#1d4ed8", // Màu xanh cùng tone với hệ thống
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H // Tăng khả năng quét khi in ấn
-    });
+    document.getElementById('det-info').innerHTML = `
+        <div class="flex flex-col gap-0.5">
+            <span><i class="fa-solid fa-phone mr-1"></i> ${data.phone || ''}</span>
+            <span><i class="fa-solid fa-location-dot mr-1"></i> ${data.address || ''}</span>
+        </div>`;
     
-    console.log("QR Code trỏ tới:", clientUrl); // Để bạn kiểm tra trong Console
-}
-    // Tải danh sách Thiết bị lắp đặt[cite: 1]
-    loadSubData('devices', 'list-devices', (item, key) => `
-        <div class="bg-gray-50 p-3 rounded border group mb-2 shadow-sm">
-            <div class="flex justify-between items-start">
-                <div>
-                    <b class="text-blue-700 text-sm">${item.name}</b>
-                    <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Thương hiệu: ${item.brand || 'N/A'}</p>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="editDevice('${key}')" class="text-blue-500 hover:text-blue-700 text-[10px] font-bold">Sửa</button>
-                    <button onclick="deleteData('devices/${key}')" class="text-red-500 hover:text-red-700 text-[10px] font-bold">Xóa</button>
-                </div>
-            </div>
-            <div class="mt-2 text-[10px] text-gray-600 font-mono border-t pt-2">
-                <p><span class="text-gray-400">S/N:</span> ${item.serial}</p>
-                <p><span class="text-gray-400">IP:</span> ${item.ip || 'N/A'}</p>
-            </div>
-        </div>`);
+    // Khởi tạo mã QR
+    const qrBox = document.getElementById('qrcode');
+    qrBox.innerHTML = "";
+    new QRCode(qrBox, { text: `${window.location.origin}/client-view.html?id=${id}`, width: 100, height: 100 });
 
-    // Tải danh sách Tài khoản & App[cite: 1]
-    loadSubData('accounts', 'list-accounts', (item, key) => `
-        <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-400 relative group mt-2 shadow-sm">
-            <div class="flex justify-between items-start">
-                <b class="text-blue-800 text-sm">${item.title}</b>
-                <span class="text-[10px] bg-blue-200 text-blue-700 px-2 rounded-full font-bold">${item.appName || 'App'}</span>
+    // --- RENDER THIẾT BỊ (Có nút Sửa/Xóa) ---
+loadSubData('devices', 'list-devices', (item, key) => `
+    <div class="bg-white p-5 rounded-[2rem] shadow-sm border border-slate-100 relative mb-3">
+        <div class="flex justify-between items-start">
+            <div class="flex-1" onclick="window.editDevice('${key}')">
+                <b class="text-slate-800 text-lg">${item.name}</b>
+                <p class="text-xs text-emerald-600 font-bold mt-1">S/N: ${item.serial || item.model || 'N/A'}</p>
             </div>
-            <p class="text-xs mt-1 font-mono"><b>U:</b> ${item.username} | <b>P:</b> ${item.password}</p>
-            <button onclick="deleteData('accounts/${key}')" class="absolute right-2 bottom-2 text-red-400 hidden group-hover:block text-[10px] hover:text-red-600">Xóa</button>
-        </div>`);
+            <div class="flex gap-4">
+                <button onclick="window.editDevice('${key}')" class="text-blue-500 text-lg p-2"><i class="fa-solid fa-pen"></i></button>
+                <button onclick="window.deleteData('devices/${key}')" class="text-red-400 text-lg p-2"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        </div>
+        <div class="mt-3 text-xs text-slate-400 border-t pt-3">IP: ${item.ip || '...'} | Pass: ${item.password || '...'}</div>
+    </div>`);
 
-    // Tải danh sách Sơ đồ hệ thống[cite: 1]
-    loadSubData('diagrams', 'list-diagrams', (item, key) => `
-        <div class="bg-purple-50 p-3 rounded border border-purple-100 group relative">
-            <div class="flex justify-between items-center text-xs">
-                <b class="text-purple-800">${item.name}</b>
-                <div class="flex gap-2 font-bold">
-                    <a href="${item.url}" target="_blank" class="text-blue-600 hover:underline">Xem</a>
-                    <button onclick="deleteData('diagrams/${key}')" class="text-red-400">Xóa</button>
-                </div>
-            </div>
-        </div>`);
+// --- RENDER TÀI KHOẢN (Bổ sung nút Sửa) ---
+loadSubData('accounts', 'list-accounts', (item, key) => `
+    <div class="bg-white p-5 rounded-[2rem] border-l-[6px] border-blue-500 shadow-sm flex justify-between items-center mb-3">
+        <div class="flex-1">
+            <b class="text-slate-800">${item.title}</b>
+            <p class="text-xs text-slate-500 mt-1">U: ${item.username} | P: ${item.password}</p>
+        </div>
+        <div class="flex gap-2">
+            <button onclick="window.editAccount('${key}')" class="text-blue-500 text-lg p-2"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="window.deleteData('accounts/${key}')" class="text-red-300 text-lg p-2"><i class="fa-solid fa-trash-can"></i></button>
+        </div>
+    </div>`);
+
+// --- RENDER SƠ ĐỒ (Bổ sung nút Sửa) ---
+loadSubData('diagrams', 'list-diagrams', (item, key) => `
+    <div class="bg-white p-4 rounded-[2rem] border border-purple-100 shadow-sm flex justify-between items-center mb-3">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center text-lg"><i class="fa-solid fa-map-location-dot"></i></div>
+            <b class="text-sm text-slate-700">${item.name}</b>
+        </div>
+        <div class="flex gap-3 items-center">
+            <a href="${item.url}" target="_blank" class="text-blue-500 font-bold text-xs uppercase p-2">XEM</a>
+            <button onclick="window.editDiagram('${key}')" class="text-emerald-500 text-lg p-2"><i class="fa-solid fa-pen"></i></button>
+            <button onclick="window.deleteData('diagrams/${key}')" class="text-red-400 text-lg p-2"><i class="fa-solid fa-trash"></i></button>
+        </div>
+    </div>`);
 };
 
 // --- 8. KHÔI PHỤC HÀM TRỢ GIÚP ---
@@ -579,45 +562,50 @@ window.deleteCustomer = async (id) => {
         }
     }
 };
-
-// Hàm lấy dữ liệu thiết bị và đổ vào Modal để chỉnh sửa
-window.editDevice = async (deviceId) => {
-    editingDeviceId = deviceId; // Lưu ID thiết bị đang sửa vào biến toàn cục
-    
+// Sửa Thiết bị (Đã lược bỏ các trường không dùng để tránh lỗi null)
+window.editDevice = async (id) => {
+    editingDeviceId = id;
     try {
-        const snapshot = await get(child(ref(db), `devices/${deviceId}`));
-        if (snapshot.exists()) {
-            const dev = snapshot.val();
-            
-            // Đổ dữ liệu vào các ô input trong Modal
+        const snap = await get(ref(db, `devices/${id}`));
+        if (snap.exists()) {
+            const dev = snap.val();
             document.getElementById('in-dev-name').value = dev.name || "";
-            document.getElementById('in-dev-serial').value = dev.serial || "";
-            document.getElementById('in-dev-brand').value = dev.brand || "";
-            document.getElementById('in-dev-install-date').value = dev.installDate || "";
-            document.getElementById('in-dev-warranty').value = dev.warranty || "";
+            document.getElementById('in-dev-model').value = dev.serial || dev.model || "";
             document.getElementById('in-dev-ip').value = dev.ip || "";
-            document.getElementById('in-dev-user').value = dev.user || "";
-            document.getElementById('in-dev-pass').value = dev.pass || "";
-            document.getElementById('in-dev-img-url').value = dev.imgUrl || "";
-            
-            // Nếu bạn có ô nhập giá bán và giá vốn ở phần thiết bị, hãy bổ sung:
-            if (document.getElementById('in-dev-price')) {
-                document.getElementById('in-dev-price').value = dev.price || 0;
-            }
-            if (document.getElementById('in-dev-cost')) {
-                document.getElementById('in-dev-cost').value = dev.cost || 0;
-            }
-
-            // Đổi tiêu đề Modal để người dùng biết đang ở chế độ chỉnh sửa
-            const title = document.getElementById('modal-device-title');
-            if (title) title.innerText = "Chỉnh sửa thông tin thiết bị";
-            
+            document.getElementById('in-dev-pass').value = dev.password || "";
             window.openModal('modal-add-device');
         }
-    } catch (e) {
-        console.error("Lỗi khi lấy dữ liệu thiết bị:", e);
-        alert("Không thể tải dữ liệu thiết bị");
-    }
+    } catch (e) { alert("Lỗi tải dữ liệu!"); }
+};
+
+// Sửa Tài khoản
+window.editAccount = async (id) => {
+    editingAccountId = id; // Bạn nhớ khai báo thêm biến let editingAccountId ở đầu file
+    try {
+        const snap = await get(ref(db, `accounts/${id}`));
+        if (snap.exists()) {
+            const acc = snap.val();
+            document.getElementById('in-acc-title').value = acc.title || "";
+            document.getElementById('in-acc-app').value = acc.appName || acc.app || "";
+            document.getElementById('in-acc-user').value = acc.username || acc.user || "";
+            document.getElementById('in-acc-pass').value = acc.password || acc.pass || "";
+            window.openModal('modal-add-account');
+        }
+    } catch (e) { alert("Lỗi tải dữ liệu!"); }
+};
+
+// Sửa Sơ đồ
+window.editDiagram = async (id) => {
+    editingDiagramId = id; // Khai báo biến này ở đầu file
+    try {
+        const snap = await get(ref(db, `diagrams/${id}`));
+        if (snap.exists()) {
+            const diag = snap.val();
+            document.getElementById('in-diag-name').value = diag.name || "";
+            document.getElementById('in-diag-url').value = diag.url || "";
+            window.openModal('modal-add-diagram');
+        }
+    } catch (e) { alert("Lỗi tải dữ liệu!"); }
 };
 
 // --- 9. XUẤT BÁO GIÁ SANG FILE PDF ---
@@ -643,8 +631,6 @@ window.printQuote = () => {
     // Lưu ý: Thư viện sẽ tự động ẩn các nút bấm nếu bạn thêm class 'no-print' cho chúng
     html2pdf().set(opt).from(element).save();
 };
-
-
 // Khởi chạy đồng thời cả hai bộ theo dõi[cite: 1]
 watchCustomers();
 watchQuotes();
