@@ -62,31 +62,29 @@ window.closeModal = (id) => {
 // --- 2. QUẢN LÝ QUÉT MÃ S/N ---
 // Thêm/Cập nhật đoạn này vào file admin-logic.js
 window.startScanner = () => {
-    const readerElem = document.getElementById('reader');
     const container = document.getElementById('reader-container');
-    
-    if (readerElem && container) {
-        container.classList.remove('hidden'); // Hiện vùng camera
-        html5QrCode = new Html5Qrcode("reader"); // Khởi tạo scanner
+    if (container) {
+        container.classList.remove('hidden');
+        html5QrCode = new Html5Qrcode("reader");
         
+        // Căn chỉnh qrbox trùng với kích thước khung CSS (w-64 = 256px, h-40 = 160px)
         const config = { 
-            fps: 10, 
-            qrbox: { width: 250, height: 150 }, // Tối ưu cho mã vạch dài
-            aspectRatio: 1.0
+            fps: 20, 
+            qrbox: { width: 260, height: 160 }, 
+            aspectRatio: 1.0 
         };
 
         html5QrCode.start(
-            { facingMode: "environment" }, // Ưu tiên camera sau
+            { facingMode: "environment" }, 
             config, 
             (decodedText) => {
-                // Khi quét thành công
                 document.getElementById('in-dev-model').value = decodedText;
                 window.stopScanner(); 
-                if (navigator.vibrate) navigator.vibrate(100); // Rung nhẹ báo hiệu thành công
+                if (navigator.vibrate) navigator.vibrate(200); 
             }
         ).catch(err => {
-            console.error("Lỗi camera: ", err);
-            alert("Vui lòng cấp quyền truy cập camera!");
+            console.error("Camera error:", err);
+            alert("Lỗi truy cập camera!");
         });
     }
 };
