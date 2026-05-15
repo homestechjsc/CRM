@@ -67,13 +67,16 @@ window.startScanner = () => {
         html5QrCode = new Html5Qrcode("reader");
         
         const config = { 
-            fps: 25, // Tăng từ 10 lên 25 để quét mượt và nhạy hơn
-            qrbox: { width: 280, height: 160 }, 
-            // Cấu hình video giúp camera lấy nét tốt hơn trên mobile
+            fps: 30, // Tăng lên 30 để khung hình mượt nhất có thể
+            qrbox: { width: 260, height: 150 }, 
+            // Cấu hình nâng cao cho lấy nét
             videoConstraints: {
                 facingMode: "environment",
-                width: { ideal: 1280 }, // Độ phân giải HD giúp nhìn rõ mã vạch nhỏ
-                height: { ideal: 720 }
+                // Ưu tiên tốc độ lấy nét hơn là độ phân giải cực cao
+                width: { min: 640, ideal: 1280, max: 1920 },
+                height: { min: 480, ideal: 720, max: 1080 },
+                // Ép camera lấy nét liên tục (nếu thiết bị hỗ trợ)
+                focusMode: "continuous"
             }
         };
 
@@ -81,7 +84,10 @@ window.startScanner = () => {
             { facingMode: "environment" }, 
             config, 
             (decodedText) => {
-                document.getElementById('in-dev-model').value = decodedText;
+                const inputSN = document.getElementById('in-dev-model');
+                if (inputSN) {
+                    inputSN.value = decodedText;
+                }
                 window.stopScanner(); 
                 if (navigator.vibrate) navigator.vibrate(200); 
             }
