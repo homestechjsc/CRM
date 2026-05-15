@@ -73,6 +73,12 @@
     #reader video {
         object-fit: cover !important;
     }
+    #reader video {
+    object-fit: cover !important;
+    /* Ép trình duyệt không làm mượt hình ảnh, giữ nguyên độ sắc nét của điểm ảnh */
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
         
     </style>
 </head>
