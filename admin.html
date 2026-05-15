@@ -79,6 +79,17 @@
     image-rendering: -webkit-optimize-contrast;
     image-rendering: crisp-edges;
 }
+/* Ép video camera hiển thị sắc nét, tăng tương phản */
+    #reader video {
+        object-fit: cover !important;
+        filter: contrast(1.2) brightness(1.1);
+        image-rendering: pixelated; /* Giúp các đường vạch barcode sắc cạnh hơn */
+    }
+
+    /* Hiệu ứng tia quét mượt mà hơn */
+    .animate-scan-line {
+        animation: scan-line-anim 1.5s ease-in-out infinite;
+    }
         
     </style>
 </head>
