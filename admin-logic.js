@@ -60,18 +60,21 @@ window.closeModal = (id) => {
 };
 
 // --- 2. QUẢN LÝ QUÉT MÃ S/N ---
-// Thêm/Cập nhật đoạn này vào file admin-logic.js
 window.startScanner = () => {
     const container = document.getElementById('reader-container');
     if (container) {
         container.classList.remove('hidden');
         html5QrCode = new Html5Qrcode("reader");
         
-        // Căn chỉnh qrbox trùng với kích thước khung CSS (w-64 = 256px, h-40 = 160px)
         const config = { 
-            fps: 20, 
-            qrbox: { width: 260, height: 160 }, 
-            aspectRatio: 1.0 
+            fps: 25, // Tăng từ 10 lên 25 để quét mượt và nhạy hơn
+            qrbox: { width: 280, height: 160 }, 
+            // Cấu hình video giúp camera lấy nét tốt hơn trên mobile
+            videoConstraints: {
+                facingMode: "environment",
+                width: { ideal: 1280 }, // Độ phân giải HD giúp nhìn rõ mã vạch nhỏ
+                height: { ideal: 720 }
+            }
         };
 
         html5QrCode.start(
@@ -84,11 +87,9 @@ window.startScanner = () => {
             }
         ).catch(err => {
             console.error("Camera error:", err);
-            alert("Lỗi truy cập camera!");
         });
     }
 };
-
 window.stopScanner = () => {
     if (html5QrCode) {
         html5QrCode.stop().then(() => {
